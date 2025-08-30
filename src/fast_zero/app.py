@@ -22,16 +22,14 @@ def read_users():
 
 
 @app.get(
-        '/users/{user_id}',
-        status_code=HTTPStatus.OK,
-        response_model=UserPublic
-        )
+    '/users/{user_id}', status_code=HTTPStatus.OK, response_model=UserPublic
+)
 def read_user(user_id: int):
     user: str
     for data in database:
-        if (data.id == user_id):
+        if data.id == user_id:
             user = data
-    return user     # type: ignore
+    return user  # type: ignore
 
 
 @app.put('/users/{user_id}', response_model=UserPublic)
