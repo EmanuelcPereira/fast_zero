@@ -40,6 +40,7 @@ addopts = ['-p', 'no:warnings', '--cov=fast_zero', '--cov-context=test']
 extend-exclude = ["*.md"]
 
 [tool.taskipy.tasks]
+pre_lint = 'typos'
 lint = 'ruff check'
 pre_format = 'ruff check --fix'
 format = 'ruff format'
