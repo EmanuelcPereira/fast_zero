@@ -130,9 +130,10 @@ def test_read_user_error(client):
     assert response.json() == {'detail': 'User not found'}
 
 
-def test_update_user(client, user):
+def test_update_user(client, user, token):
     response = client.put(
-        '/users/1',
+        f'/users/{user.id}',
+        headers={'Authorization': f'Bearer {token}'},
         json={
             'username': 'Bob Doe',
             'email': 'bob_doe@mail.com',
@@ -144,13 +145,14 @@ def test_update_user(client, user):
     assert response.json() == {
         'username': 'Bob Doe',
         'email': 'bob_doe@mail.com',
-        'id': 1,
+        'id': user.id,
     }
 
 
-def test_update_user_error(client):
+def test_update_user_error(client, token):
     response = client.put(
-        '/users/2',
+        '/users/9999999',
+        headers={'Authorization': f'Bearer {token}'},
         json={
             'username': 'Bob Doe',
             'email': 'bob_doe@mail.com',
@@ -162,7 +164,7 @@ def test_update_user_error(client):
     assert response.json() == {'detail': 'User not found'}
 
 
-def test_update_integrity_error(client, user):
+def test_update_integrity_error(client, user, token):
     client.post(
         '/users',
         json={
@@ -174,6 +176,7 @@ def test_update_integrity_error(client, user):
 
     response_update = client.put(
         f'/users/{user.id}',
+        headers={'Authorization': f'Bearer {token}'},
         json={
             'username': 'Severino',
             'email': 'bob_dylan@mail.com',
@@ -187,7 +190,7 @@ def test_update_integrity_error(client, user):
     }
 
 
-def test_delete_user(client, user):
+def test_delete_user(client, user, token):
     client.post(
         '/users',
         json={
@@ -197,14 +200,20 @@ def test_delete_user(client, user):
         },
     )
 
-    response = client.delete(f'/users/{user.id}')
+    response = client.delete(
+        f'/users/{user.id}',
+        headers={'Authorization': f'Bearer {token}'},
+    )
 
     assert response.status_code == HTTPStatus.OK
     assert response.json() == {'message': 'User deleted'}
 
 
-def test_delete_user_error(client):
-    response = client.delete('/users/2')
+def test_delete_user_error(client, token):
+    response = client.delete(
+        '/users/9999',
+        headers={'Authorization': f'Bearer {token}'},
+    )
 
     assert response.status_code == HTTPStatus.NOT_FOUND
     assert response.json() == {'detail': 'User not found'}
