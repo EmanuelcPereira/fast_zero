@@ -65,9 +65,7 @@ def test_create_user_with_username_already_exists(client):
     )
 
     assert response.status_code == HTTPStatus.CONFLICT
-    assert response.json() == {
-        'detail': 'Username already exists'
-    }
+    assert response.json() == {'detail': 'Username already exists'}
 
 
 def test_create_user_with_email_already_exists(client):
@@ -90,9 +88,7 @@ def test_create_user_with_email_already_exists(client):
     )
 
     assert response.status_code == HTTPStatus.CONFLICT
-    assert response.json() == {
-        'detail': 'Email already exists'
-    }
+    assert response.json() == {'detail': 'Email already exists'}
 
 
 def test_read_users(client):
@@ -197,8 +193,8 @@ def test_delete_user(client, user):
         json={
             'username': 'Severino',
             'email': 'severino_felix@mail.com',
-            'password': 'tanahorademolharobiscoito'
-        }
+            'password': 'tanahorademolharobiscoito',
+        },
     )
 
     response = client.delete(f'/users/{user.id}')
