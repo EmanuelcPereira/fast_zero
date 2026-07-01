@@ -1,26 +1,31 @@
-
 from http import HTTPStatus
+from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException
-from fastapi.security import OAuth2PasswordRequestForm
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
 
 from fast_zero.database import get_session
 from fast_zero.models import User
-from fast_zero.schemas import Message, Token, UserList, UserPublic, UserSchema
+from fast_zero.schemas import (
+    FilterPage,
+    Message,
+    UserList,
+    UserPublic,
+    UserSchema,
+)
 from fast_zero.security import (
-    create_access_token,
     get_current_user,
     get_password_hash,
-    verify_password,
 )
 
 router = APIRouter(prefix='/users', tags=['users'])
+type Session = Annotated[Session, Depends(get_session)]
+type CurrentUser = Annotated[Session, Depends(get_current_user)]
+
 
 @router.post('/', status_code=HTTPStatus.CREATED, response_model=UserPublic)
-def create_user(user: UserSchema, session: Session = Depends(get_session)):
+def create_user(user: UserSchema, session: Session):
     db_user = session.scalar(
         select(User).where(
             (User.username == user.username) | (User.email == user.email)
@@ -52,16 +57,16 @@ def create_user(user: UserSchema, session: Session = Depends(get_session)):
 
 
 @router.get('/', response_model=UserList)
-def read_users(
-    skip: int = 0, limit: int = 100, session: Session = Depends(get_session)
-):
-    users = session.scalars(select(User).offset(skip).limit(limit)).all()
+def read_users(session: Session, filter_users: Annotated[FilterPage, Query()]):
+    users = session.scalars(
+        select(User).offset(filter_users.offset).limit(filter_users.limit)
+    ).all()
 
     return {'users': users}
 
 
 @router.get('/{user_id}', response_model=UserPublic)
-def read_user(user_id: int, session: Session = Depends(get_session)):
+def read_user(user_id: int, session: Session):
     found_user = session.scalar(select(User).where(User.id == user_id))
     if not found_user:
         raise HTTPException(
@@ -72,10 +77,7 @@ def read_user(user_id: int, session: Session = Depends(get_session)):
 
 @router.put('/{user_id}', response_model=UserPublic)
 def update_user(
-    user_id: int,
-    user: UserSchema,
-    session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    user_id: int, user: UserSchema, session: Session, current_user: CurrentUser
 ):
     db_user = session.scalar(select(User).where(User.id == user_id))
     if not db_user:
@@ -106,8 +108,8 @@ def update_user(
 @router.delete('/{user_id}', response_model=Message)
 def delete_user(
     user_id: int,
-    session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    session: Session,
+    current_user: CurrentUser,
 ):
     db_user = session.scalar(select(User).where(User.id == user_id))
     if not db_user:
@@ -124,27 +126,3 @@ def delete_user(
     session.commit()
 
     return {'message': 'User deleted'}
-
-
-@router.post('/token', response_model=Token)
-def login_for_access_token(
-    form_data: OAuth2PasswordRequestForm = Depends(),
-    session: Session = Depends(get_session),
-):
-    user = session.scalar(select(User).where(User.email == form_data.username))
-
-    if not user:
-        raise HTTPException(
-            status_code=HTTPStatus.UNAUTHORIZED,
-            detail='Incorrect email or password',
-        )
-
-    if not verify_password(form_data.password, user.password):
-        raise HTTPException(
-            status_code=HTTPStatus.UNAUTHORIZED,
-            detail='Incorrect email or password',
-        )
-
-    access_token = create_access_token(data={'sub': user.email})
-
-    return {'access_token': access_token, 'token_type': 'bearer'}
